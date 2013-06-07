@@ -10,6 +10,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 
@@ -24,6 +25,8 @@ import javax.jws.WebService;
 public class RSI_JDG_WS {
 
     private final String schemeName = "NLIGHT";
+    private final String dbName = "jdg_db";
+    private final String tableName = "jdg_users";
 
     @WebMethod
     public String dodaj(String nip) {
@@ -32,8 +35,16 @@ public class RSI_JDG_WS {
 
     @WebMethod
     public String dodajObj(JDG jdg) throws FileNotFoundException, IOException, SQLException {
-        DataConnection dc = new DataConnection(schemeName);
-        dc.insert("jdg_users", "'" + jdg.getNip() + "','sad'");
+        DataConnection dc = new DataConnection(schemeName, dbName);
+        dc.insert(tableName,
+                "'" + jdg.nip + "',"
+                + "'" + jdg.nazwa + "',"
+                + "'" + jdg.wlasciciel + "',"
+                + "'" + jdg.dataZalozenia + "',"
+                + "'" + jdg.krs + "',"
+                + "'" + jdg.rodzajDzialalnosci + "',"
+                + "'" + jdg.adresSiedziby + "',"
+                + "'" + ((jdg.czyPierwsza == true) ? 'T' : 'F') + "'");
 
         dc.close();
         String msg = "Dodano nowego JDG do bazy.";
@@ -80,30 +91,43 @@ public class RSI_JDG_WS {
     }
 
     @WebMethod
-    public String pokaz() throws SQLException {
-        DataConnection dc = new DataConnection(schemeName);
-        String list = dc.select("jdg_users");
+///    public String pokaz() throws SQLException {
+    public JDG[] pokaz() throws SQLException {
+        DataConnection dc = new DataConnection(schemeName, dbName);
+        JDG[] list;
+        list = dc.select(tableName);
+        System.out.println("list nip " + list[0].nip);
         dc.close();
 
+        for (int i = 0; i < list.length; i++) {
+            String jsonOut = getJSonOutput("http://localhost:9999/RSI_person_service/webresources/osoby/pobierz?pesel=" + list[i].wlasciciel);
+            System.out.println(jsonOut);
+            System.out.println(toObj(jsonOut));
+            Osoba os = toObj(jsonOut);
+            System.out.println("os." + os.getImie());
+            String objOut = toObj(jsonOut).toString();
+            list[i].wlasciciel = objOut;
+        }
 
-
-//        String jsonOut = getJSonOutput("http://localhost:9999/RSI_person_service/webresources/osoby/pobierz?pesel=111");
-//        System.out.println(jsonOut);
-//        System.out.println(toObj(jsonOut));
-//        Osoba os = toObj(jsonOut);
-//        System.out.println("os." + os.getImie());
-//        String objOut = toObj(jsonOut).toString();
-//
-        //return objOut;
         return list;
     }
+//    public ArrayList pokaz() throws SQLException {
+//        DataConnection dc = new DataConnection(schemeName, dbName);
+//        //String list = dc.select("jdg_users");
+//        ArrayList<JDG> list = new ArrayList<JDG>();
+//        list = dc.select("jdg_users");
+//        dc.close();
+//
+//
+//
+////        String jsonOut = getJSonOutput("http://localhost:9999/RSI_person_service/webresources/osoby/pobierz?pesel=111");
+////        System.out.println(jsonOut);
+////        System.out.println(toObj(jsonOut));
+////        Osoba os = toObj(jsonOut);
+////        System.out.println("os." + os.getImie());
+////        String objOut = toObj(jsonOut).toString();
+////
+//        //return objOut;
+//        return list;
+//    }
 }
-//        while (rs.next()) {
-//                        System.out.print(rs.getInt(1));
-//                        System.out.print(": ");
-//                        System.out.print(rs.getString(2));
-//                        System.out.print(": ");
-//                        System.out.print(rs.getString(3));
-//                        System.out.println("");
-//                    }
-
