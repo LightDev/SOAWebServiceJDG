@@ -25,23 +25,8 @@ class DataConnection {
         try {
             Class.forName(driver).newInstance();
             conn = DriverManager.getConnection(url + dbName, userName, password);
-            System.out.println("Connected to the database");
-            //conn.setSchema("NLIGHT");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return conn;
-    }
+//            conn.setAutoCommit(true);
 
-    private Connection connect2() {
-        String url = "jdbc:derby://localhost:1527/";
-        String dbName = "osoba";
-        String driver = "org.apache.derby.jdbc.ClientDriver";
-        String userName = "nlight";
-        String password = "a";
-        try {
-            Class.forName(driver).newInstance();
-            conn = DriverManager.getConnection(url + dbName, userName, password);
             System.out.println("Connected to the database");
             //conn.setSchema("NLIGHT");
         } catch (Exception e) {
@@ -88,60 +73,74 @@ class DataConnection {
         }
         return list;
     }
-//    public String select(String tableName) {
-//        java.sql.ResultSet rs = null;
-//        String list = "";
-//        try {
-//            st = conn.createStatement();
-//            rs = st.executeQuery("SELECT * FROM " + scheme + ".\"" + tableName + "\"");
-//            while (rs.next()) {
-//                list += rs.getInt(1) + ": "
-//                        + rs.getString(2) + ": "
-//                        + rs.getString(3) + "<br />";
-//            }
-//            System.out.println("Rows selected");
-//        } catch (SQLException ex) {
-//            Logger.getLogger(DataConnection.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//        return list;
-//    }
+
+    public JDG[] select(String tableName, String whereCondition) {
+        java.sql.ResultSet rs = null;
+        JDG list[] = null;
+        try {
+            st = conn.createStatement();
+            rs = st.executeQuery("SELECT count(*) FROM " + scheme + "." + tableName + " WHERE " + whereCondition);
+            int count = 0;
+            while (rs.next()) {
+                count = rs.getInt(1);
+            }
+            System.out.println("COUNT(*)=" + count);
+            st = conn.createStatement();
+            rs = st.executeQuery("SELECT * FROM " + scheme + "." + tableName + " WHERE " + whereCondition);
+            int i = 0;
+
+            list = new JDG[count];
+            while (rs.next()) {
+                list[i] = new JDG(
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4),
+                        rs.getString(5),
+                        rs.getString(6),
+                        rs.getString(7),
+                        rs.getString(8),
+                        (rs.getString(9).equals("T")) ? true : false);
+                i++;
+            }
+            System.out.println("Rows selected");
+        } catch (SQLException ex) {
+            Logger.getLogger(DataConnection.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return list;
+    }
 
     public void insert(String tableName, String values) {
         try {
             st = conn.createStatement();
-            st.executeUpdate("INSERT INTO " + scheme + "." + tableName + " VALUES((select count(1)+1 from " + scheme + "." + tableName + ")," + values + ")");
+            st.executeUpdate("INSERT INTO " + scheme + "." + tableName + " VALUES((select count(*)+1 from " + scheme + "." + tableName + ")," + values + ")");
 //            st.executeUpdate("INSERT INTO " + scheme + ".\"" + tableName + "\" VALUES((select count(1)+1 from " + scheme + ".\"" + tableName + "\")," + values + ")");
             System.out.println("Row inserted");
-
-
-
         } catch (SQLException ex) {
             Logger.getLogger(DataConnection.class
                     .getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    public void update(Connection conn, Statement st, String setOfValues) {
+    public void update(String tableName, String setOfValues, String whereCondition) {
         try {
+
+            conn.setAutoCommit(false);
             st = conn.createStatement();
-            st.executeUpdate("UPDATE " + scheme + ".\"jdg_users\" SET " + setOfValues + "");
-            System.out.println("Row updated");
-
-
-
+            int howmany = st.executeUpdate("UPDATE " + scheme + "." + tableName + " SET " + setOfValues + " WHERE " + whereCondition + "");
+            System.out.println("Row updated: " + howmany);
+            conn.commit();
+            conn.setAutoCommit(true);
         } catch (SQLException ex) {
             Logger.getLogger(DataConnection.class
                     .getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    public void delete(Connection conn, Statement st, String tableName, String values) {
+    public void delete(String tableName, String values) {
         try {
             st = conn.createStatement();
-            st.executeUpdate("DELETE FROM " + scheme + ".\"" + tableName + "\" WHERE " + values + "");
+            st.executeUpdate("DELETE FROM " + scheme + "." + tableName + " WHERE " + values + "");
             System.out.println("Row deleted");
-
-
         } catch (SQLException ex) {
             Logger.getLogger(DataConnection.class
                     .getName()).log(Level.SEVERE, null, ex);
@@ -159,14 +158,6 @@ class DataConnection {
                     .getName()).log(Level.SEVERE, null, ex);
         }
     }
-//    public void close(Connection conn) {
-//        try {
-//            conn.close();
-//            System.out.println("Disconnected from database");
-//        } catch (SQLException ex) {
-//            Logger.getLogger(DataConnection.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//    }
     private Connection conn = null;
     private Statement st = null;
     private String scheme;

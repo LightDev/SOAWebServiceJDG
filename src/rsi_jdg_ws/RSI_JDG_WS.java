@@ -47,8 +47,81 @@ public class RSI_JDG_WS {
                 + "'" + ((jdg.czyPierwsza == true) ? 'T' : 'F') + "'");
 
         dc.close();
-        String msg = "Dodano nowego JDG do bazy.";
+        String msg = "Dodano nowego JDG.";
         return msg;
+    }
+
+    @WebMethod
+    //public String modyfikuj(String nip) {
+    public String modyfikuj(JDG jdg) {
+        DataConnection dc = new DataConnection(schemeName, dbName);
+        //JDG jdg = pobierz(jdg2.nip);
+        System.out.println("przed updatem");
+        System.out.println("wlascieciel " + jdg.wlasciciel);
+        System.out.println("dataZalozenia " + jdg.dataZalozenia);
+        dc.update(tableName,
+                "nip='" + jdg.nip + "',"
+                + "nazwa='" + jdg.nazwa + "',"
+                + "wlasciciel='" + jdg.wlasciciel + "',"
+                + "datazalozenia='" + jdg.dataZalozenia + "',"
+                + "krs='" + jdg.krs + "',"
+                + "rodzajdzialalnosci='" + jdg.rodzajDzialalnosci + "',"
+                + "adressiedziby='" + jdg.adresSiedziby + "',"
+                + "czyPierwsza='" + ((jdg.czyPierwsza == true) ? 'T' : 'F') + "'",
+                "nip='" + jdg.nip + "'");
+        System.out.println("row UPDATED");
+
+        dc.close();
+        String msg = "Zmodyfikowano.";
+        return msg;
+
+    }
+
+    @WebMethod
+    public String usun(String nip) {
+        DataConnection dc = new DataConnection(schemeName, dbName);
+        dc.delete(tableName, "nip='" + nip + "'");
+        dc.close();
+        String msg = "Usunięto JDG posiadającym NIP " + nip + ".";
+        return msg;
+    }
+
+    @WebMethod
+    public Osoba pobierzOsobe(String pesel) {
+        String jsonOut = getJSonOutput("http://localhost:9999/RSI_person_service/webresources/osoby/pobierz?pesel=" + pesel);
+        Osoba os = toObj(jsonOut);
+        return os;
+    }
+
+    @WebMethod
+    public JDG pobierz(String nip) {
+        DataConnection dc = null;
+        JDG jdgObj = null;
+        try {
+            dc = new DataConnection(schemeName, dbName);
+            JDG[] jdg = dc.select(tableName, "nip='" + nip + "'");
+
+            jdgObj = jdg[0];
+            System.out.println(jdgObj);
+        } finally {
+            dc.close();
+        }
+        return jdgObj;
+    }
+
+    @WebMethod
+    public JDG[] pokaz() throws SQLException {
+        DataConnection dc = new DataConnection(schemeName, dbName);
+        JDG[] list;
+        list = dc.select(tableName);
+        dc.close();
+
+        for (int i = 0; i < list.length; i++) {
+            Osoba os = pobierzOsobe(list[i].wlasciciel);
+            String objOut = os.toString();
+            list[i].wlasciciel = objOut;
+        }
+        return list;
     }
 
     @WebMethod
@@ -89,45 +162,4 @@ public class RSI_JDG_WS {
         //System.out.println(obj);
         return obj;
     }
-
-    @WebMethod
-///    public String pokaz() throws SQLException {
-    public JDG[] pokaz() throws SQLException {
-        DataConnection dc = new DataConnection(schemeName, dbName);
-        JDG[] list;
-        list = dc.select(tableName);
-        System.out.println("list nip " + list[0].nip);
-        dc.close();
-
-        for (int i = 0; i < list.length; i++) {
-            String jsonOut = getJSonOutput("http://localhost:9999/RSI_person_service/webresources/osoby/pobierz?pesel=" + list[i].wlasciciel);
-            System.out.println(jsonOut);
-            System.out.println(toObj(jsonOut));
-            Osoba os = toObj(jsonOut);
-            System.out.println("os." + os.getImie());
-            String objOut = toObj(jsonOut).toString();
-            list[i].wlasciciel = objOut;
-        }
-
-        return list;
-    }
-//    public ArrayList pokaz() throws SQLException {
-//        DataConnection dc = new DataConnection(schemeName, dbName);
-//        //String list = dc.select("jdg_users");
-//        ArrayList<JDG> list = new ArrayList<JDG>();
-//        list = dc.select("jdg_users");
-//        dc.close();
-//
-//
-//
-////        String jsonOut = getJSonOutput("http://localhost:9999/RSI_person_service/webresources/osoby/pobierz?pesel=111");
-////        System.out.println(jsonOut);
-////        System.out.println(toObj(jsonOut));
-////        Osoba os = toObj(jsonOut);
-////        System.out.println("os." + os.getImie());
-////        String objOut = toObj(jsonOut).toString();
-////
-//        //return objOut;
-//        return list;
-//    }
 }
